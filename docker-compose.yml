@@ -1,0 +1,122 @@
+#TODO:: Заюзати REPO_DIR
+version: "3.9"
+#  docker compose up;
+
+# Назва сайту	 - site
+# Ім'я користувача	- serega
+# Пароль	- 123
+# Ваш e-mail	- serega.n.v000@gmail.com
+
+# DB conf, налаштовував при помилці БД
+# Назва бази даних - wordpress
+# Ім'я користувача - sereganv
+# Пароль - 123
+# Хост бази даних - localhost
+# Табличний префікс - wp_
+
+# При запуску контейнера змінює власника папки,
+# sudo chown -R sereganv:sereganv wordpress
+
+networks:
+  wpsite:
+#    driver: bridge
+volumes:
+  wp_db_data:
+services:
+  # Database
+  wp_db:
+    image: mysql:8.0
+    container_name: mysql8
+    restart: unless-stopped
+    volumes:
+      - wp_db_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    command: '--default-authentication-plugin=mysql_native_password'
+    networks:
+      - wpsite
+#  # phpmyadmin
+#  phpmyadmin:
+#    depends_on:
+#      - wp_db
+#    image: phpmyadmin/phpmyadmin
+#    restart: always
+#    ports:
+#      - '8080:80'
+#    environment:
+#      PMA_HOST: db
+#      MYSQL_ROOT_PASSWORD: password
+#    networks:
+#      - wpsite
+  # Wordpress
+  wordpress:
+    image: wordpress:latest
+#    image: wordpress:5.7.0-php8.0-fpm
+#    image: wordpress:latest
+#    container_name: wordpress-5.7.0-php8.0-fpm
+    container_name: wp-latest
+    depends_on:
+      - wp_db
+    restart: unless-stopped
+    ports:
+      - '8000:80'
+    volumes: ['./:/var/www/html']
+    environment:
+      # WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_HOST: wp_db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    networks:
+      - wpsite
+
+#version: '3'
+#
+#services:
+#  # Database
+#  db:
+#    image: mysql:5.7
+#    volumes:
+#      - db_data:/var/lib/mysql
+#    restart: always
+#    environment:
+#      MYSQL_ROOT_PASSWORD: password
+#      MYSQL_DATABASE: wordpress
+#      MYSQL_USER: wordpress
+#      MYSQL_PASSWORD: wordpress
+#    networks:
+#      - wpsite
+#  # phpmyadmin
+#  #  phpmyadmin:
+#  #    depends_on:
+#  #      - db
+#  #    image: phpmyadmin/phpmyadmin
+#  #    restart: always
+#  #    ports:
+#  #      - '8080:80'
+#  #    environment:
+#  #      PMA_HOST: db
+#  #      MYSQL_ROOT_PASSWORD: password
+#  #    networks:
+#  #      - wpsite
+#  # Wordpress
+#  wordpress:
+#    depends_on:
+#      - db
+#    image: wordpress:latest
+#    ports:
+#      - '8000:80'
+#    restart: always
+#    volumes: ['./:/var/www/html']
+#    environment:
+#      WORDPRESS_DB_HOST: db:3306
+#      WORDPRESS_DB_USER: wordpress
+#      WORDPRESS_DB_PASSWORD: wordpress
+#    networks:
+#      - wpsite
+#networks:
+#  wpsite:
+#volumes:
+#  db_data:
