@@ -1,122 +1,74 @@
-#TODO:: Заюзати REPO_DIR
 version: "3.9"
 #  docker compose up;
-
-# Назва сайту	 - site
-# Ім'я користувача	- serega
-# Пароль	- 123
-# Ваш e-mail	- serega.n.v000@gmail.com
-
-# DB conf, налаштовував при помилці БД
-# Назва бази даних - wordpress
-# Ім'я користувача - sereganv
-# Пароль - 123
-# Хост бази даних - localhost
-# Табличний префікс - wp_
-
-# При запуску контейнера змінює власника папки,
-# sudo chown -R sereganv:sereganv wordpress
+# - ds wp
 
 networks:
-  wpsite:
-#    driver: bridge
-volumes:
-  wp_db_data:
+  test-wp:
+
 services:
-  # Database
-  wp_db:
+  wp_mysql:
     image: mysql:8.0
     container_name: mysql8
-    restart: unless-stopped
+    restart: always
+    ports:
+      - '3306:3306'
     volumes:
-      - wp_db_data:/var/lib/mysql
+      - ./.srv/database:/var/lib/mysql
+    # необхідний набор змінних
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: wordpress
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: test-wp
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
-    command: '--default-authentication-plugin=mysql_native_password'
     networks:
-      - wpsite
-#  # phpmyadmin
-#  phpmyadmin:
-#    depends_on:
-#      - wp_db
-#    image: phpmyadmin/phpmyadmin
-#    restart: always
-#    ports:
-#      - '8080:80'
-#    environment:
-#      PMA_HOST: db
-#      MYSQL_ROOT_PASSWORD: password
-#    networks:
-#      - wpsite
-  # Wordpress
+      - test-wp
+
+  # http://localhost:8000/
   wordpress:
     image: wordpress:latest
-#    image: wordpress:5.7.0-php8.0-fpm
-#    image: wordpress:latest
-#    container_name: wordpress-5.7.0-php8.0-fpm
     container_name: wp-latest
     depends_on:
-      - wp_db
-    restart: unless-stopped
+      - wp_mysql
+    links:
+      - wp_mysql
+    restart: always
     ports:
       - '8000:80'
-    volumes: ['./:/var/www/html']
+    # необхідний набор змінних
     environment:
-      # WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_HOST: wp_db:3306
+      WORDPRESS_DB_HOST: wp_mysql:3306
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: test-wp
+      WORDPRESS_DEBUG: 1
+    volumes:
+      # цей volume для того, щоб wordpress з цієї папки брати і ставити в інтерпретатор, на сам сервер
+      # тепер можемо вносити зміни в теми або плагіни і вони будуть доступні в контейнері без його перезапуску
+      - ./.srv/wordpress:/var/www/html
+      # монтуємо теми в контейнер
+      - ./themes/mytheme/:/var/www/html/wp-content/themes/mytheme
+#      - ./themes/woodmart/:/var/www/html/wp-content/themes/woodmart
+      # монтуємо плагіни в контейнер
+      - ./plugin/:/var/www/html/wp-content/plugins/my-core
+      # монтуємо конфіги для php в контейнер
+      - ./.srv/custom.ini:/usr/local/etc/php/conf.d/custom.ini
     networks:
-      - wpsite
+      - test-wp
 
-#version: '3'
-#
-#services:
-#  # Database
-#  db:
-#    image: mysql:5.7
-#    volumes:
-#      - db_data:/var/lib/mysql
-#    restart: always
-#    environment:
-#      MYSQL_ROOT_PASSWORD: password
-#      MYSQL_DATABASE: wordpress
-#      MYSQL_USER: wordpress
-#      MYSQL_PASSWORD: wordpress
-#    networks:
-#      - wpsite
-#  # phpmyadmin
-#  #  phpmyadmin:
-#  #    depends_on:
-#  #      - db
-#  #    image: phpmyadmin/phpmyadmin
-#  #    restart: always
-#  #    ports:
-#  #      - '8080:80'
-#  #    environment:
-#  #      PMA_HOST: db
-#  #      MYSQL_ROOT_PASSWORD: password
-#  #    networks:
-#  #      - wpsite
-#  # Wordpress
-#  wordpress:
-#    depends_on:
-#      - db
-#    image: wordpress:latest
-#    ports:
-#      - '8000:80'
-#    restart: always
-#    volumes: ['./:/var/www/html']
-#    environment:
-#      WORDPRESS_DB_HOST: db:3306
-#      WORDPRESS_DB_USER: wordpress
-#      WORDPRESS_DB_PASSWORD: wordpress
-#    networks:
-#      - wpsite
-#networks:
-#  wpsite:
-#volumes:
-#  db_data:
+  # http://localhost:8181/
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    depends_on:
+      - wp_mysql
+    links:
+      - wp_mysql
+    ports:
+      - '8181:80'
+    environment:
+      MYSQL_USERNAME: wordpress
+      MYSQL_ROOT_PASSWORD: wordpress
+      PMA_HOST: wp_mysql
+    restart: always
+    networks:
+      - test-wp
